@@ -1,0 +1,23 @@
+.feedbackBtn {
+  box-sizing: border-box;
+  background-color: #fff;
+  border: 1px solid rgb(209, 207, 207);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  height: 25px;
+  padding: 0 15px;
+  text-decoration: none;
+  transition: all 500ms;
+}
+
+.feedbackBtn:nth-of-type(even) {
+  margin: auto 10px;
+}
+
+.feedbackBtn:active {
+  color: #fff;
+  background-color: rgb(70, 136, 243);
+  border-color: rgb(70, 136, 243);
+}
