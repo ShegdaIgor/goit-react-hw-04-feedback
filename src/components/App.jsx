@@ -1,62 +1,94 @@
-import { Statistics } from './Statistics/Statistics.jsx';
-import { FeedbackOptions } from './FeedbackOptions/FeedbackOptions.jsx';
-import { Section } from './Section/Section.jsx';
-import { Notification } from './Notification/Notification';
+import React, { Component } from 'react';
+import { Button } from './Button/Button';
+import Searchbar from './Searchbar/Searchbar';
 import css from '../components/App.module.css';
-import { useState } from 'react';
+import { ImageGallery } from './ImageGallery/ImageGallery';
+import { pixabayGetImages } from 'services/api';
+import { Loader } from './Loader/Loader';
 
-export const App = () => {
-  const [good, setGood] = useState(0);
-  const [neutral, setNeutral] = useState(0);
-  const [bad, setBad] = useState(0);
+export class App extends Component {
+  state = {
+    images: [],
+    page: 1,
+    query: '',
+    totalHits: null,
+    isLoading: false,
+    error: null,
+  };
 
-  const handleFeedback = option => {
-    switch (option) {
-      case 'good':
-        setGood(prev => prev + 1);
-        break;
-      case 'neutral':
-        setNeutral(prev => prev + 1);
-        break;
-      case 'bad':
-        setBad(prev => prev + 1);
-        break;
-      default:
-        break;
+  async componentDidUpdate(_, prevState) {
+    if (
+      prevState.query !== this.state.query ||
+      prevState.page !== this.state.page
+    ) {
+      this.setState({
+        isLoading: true,
+      });
+
+      try {
+        const { hits, totalHits } = await pixabayGetImages(
+          this.state.query,
+          this.state.page
+        );
+
+        if (hits.length === 0) {
+          this.setState({ error: 'error', images: [] });
+          return;
+        }
+
+        this.setState(prevState => ({
+          images: this.state.page === 1 ? hits : [...prevState.images, ...hits],
+          totalHits: totalHits,
+          error: null,
+        }));
+      } catch (error) {
+        this.setState({
+          error: error,
+        });
+      } finally {
+        this.setState({
+          isLoading: false,
+        });
+      }
     }
+  }
+
+  handleSubmit = query => {
+    this.setState({ query, page: 1, error: null });
   };
 
-  const totalFeedback = () => {
-    let total = good + neutral + bad;
-    return total;
+  handleLoadMore = () => {
+    this.setState(prevState => ({ page: prevState.page + 1 }));
   };
 
-  const positivePercentage = () => {
-    return Math.round((good / totalFeedback()) * 100);
-  };
-
-  return (
-    <div className={css.app_style}>
-      <Section title="Please leave feedback">
-        <FeedbackOptions
-          options={['good', 'neutral', 'bad']}
-          onLeaveFeedback={handleFeedback}
-        />
-      </Section>
-
-      <Section title="Statistics">
-        {totalFeedback() !== 0 ? (
-          <Statistics
-            good={good}
-            neutral={neutral}
-            bad={bad}
-            total={totalFeedback()}
-            positivePercentage={positivePercentage()}
-          />
-        ) : (
-          <Notification message="There is no feedback"></Notification>
+  render() {
+    // console.log(this.state.images);
+    return (
+      <div className={css.App}>
+        <Searchbar onSubmit={this.handleSubmit} />
+        {this.state.error === 'error' && (
+          <p
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              fontSize: 20,
+              color: '#010101',
+            }}
+          >
+            There is nothing here.
+          </p>
         )}
-      </Section>
-    </div>
-  );
-};
+        {this.state.error === null && (
+          <ImageGallery images={this.state.images} />
+        )}
+
+        {this.state.isLoading && <Loader />}
+        {this.state.totalHits > this.state.images.length &&
+          this.state.error === null && (
+            <Button onLoadMore={this.handleLoadMore} />
+          )}
+      </div>
+    );
+  }
+}
